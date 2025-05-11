@@ -1,0 +1,90 @@
+#include <HardwareSerial.h>
+#include <ESP32Servo.h>
+
+HardwareSerial VCSerial(2);  // UART2 (RX=16, TX=17)
+
+unsigned int receivedValue = 0;
+int buzzer = 33;
+
+Servo servo1;
+const int servoPin1 = 13;
+
+
+void setup() {
+  Serial.begin(9600);
+  VCSerial.begin(9600, SERIAL_8N1, 16, 17);  // RX=16, TX=17
+  pinMode(buzzer, OUTPUT);
+  servo1.setPeriodHertz(50);
+  servo1.attach(servoPin1, 500, 2500);
+  //digitalWrite(buzzer, HIGH); 
+  Serial.println("Siap menerima perintah suara...");
+}
+
+void loop() {
+  if (VCSerial.available() >= 2) {
+    byte highByte = VCSerial.read();
+    byte lowByte = VCSerial.read();
+    receivedValue = (highByte << 8) | lowByte;
+
+    Serial.print("Kode diterima: 0x");
+    Serial.println(receivedValue, HEX);
+
+    if (receivedValue == 0xA105) {
+      Serial.println("Perintah: LEFT");
+      Serial.println("kiri 5 derajat");
+      servo1.write(70);
+      delay(90);
+      servo1.write(90);
+    } else if (receivedValue == 0xA103) {
+      Serial.println("Perintah: LITTLE BIT LEFT");
+      Serial.println("kiri 3 derajat");
+      servo1.write(70);
+      delay(50);
+      servo1.write(90);
+    } else if (receivedValue == 0xA203) {
+      Serial.println("Perintah: LITTLE BIT RIGHT");
+      Serial.println("kanan 3 derajat");
+      servo1.write(110);
+      delay(50);
+      servo1.write(90);
+    } else if (receivedValue == 0xA305) {
+      Serial.println("Perintah: FORWARD");
+    } else if (receivedValue == 0xA303) {
+      Serial.println("Perintah: LITTLE BIT FORWARD");
+    } else if (receivedValue == 0xA405) {
+      Serial.println("Perintah: BACKWARD");
+    } else if (receivedValue == 0xA403) {
+      Serial.println("Perintah: LITTLE BIT BACKWARD");
+    } else if (receivedValue == 0xA505) {
+      Serial.println("Perintah: UP");
+    } else if (receivedValue == 0xA503) {
+      Serial.println("Perintah: LITTLE BIT UP");
+    } else if (receivedValue == 0x606) {
+      Serial.println("Perintah: DOWN");
+    } else if (receivedValue == 0xA603) {
+      Serial.println("Perintah: LITTLE BIT DOWN");
+    } else if (receivedValue == 0xAA11) {
+      Serial.println("Perintah: LIGHT ON");
+    } else if (receivedValue == 0xAA00) {
+      Serial.println("Perintah: LIGHT OFF");
+    } else if (receivedValue == 0xB125) {
+      Serial.println("Perintah: BRIGHT");
+      //digitalWrite(ledPin, HIGH);
+      digitalWrite(buzzer, HIGH);
+      delay(3000);
+      digitalWrite(buzzer, LOW);
+    } else if (receivedValue == 0xB150) {
+      Serial.println("Perintah: MORE BRIGHT");
+    } else if (receivedValue == 0xB225) {
+      Serial.println("Perintah: DIM");
+    } else if (receivedValue == 0xB250) {
+      Serial.println("Perintah: MORE DIM");
+    } else if (receivedValue == 0xAB110) {
+      Serial.println("Perintah: WARM");
+    } else if (receivedValue == 0xB210) {
+      Serial.println("Perintah: COOL");
+    } else if (receivedValue == 0xA190) {
+      Serial.println("Perintah: POSITION");
+    }
+  }
+}
