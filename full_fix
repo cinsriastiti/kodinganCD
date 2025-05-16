@@ -1,0 +1,98 @@
+#include <SoftwareSerial.h>
+#include <Servo.h>
+
+SoftwareSerial VCSerial(10, 11); // RX = 10, TX = 11
+
+unsigned int receivedValue = 0;
+const int relay = 7;
+const int servoPin1 = 8;
+const int servoPin2 = 9;
+
+Servo servo1; // untuk pergerakan horizontal
+Servo servo2; // untuk pergerakan vertikal
+
+void setup() {
+  Serial.begin(9600);
+  VCSerial.begin(9600); // komunikasi dengan VC-02
+
+  pinMode(relay, OUTPUT);
+  digitalWrite(relay, LOW); // relay mati di awal
+
+  servo1.attach(servoPin1);
+  servo2.attach(servoPin2);
+
+  servo1.write(90); // posisi tengah
+  servo2.write(90); // posisi tengah
+
+  Serial.println("Siap menerima perintah suara...");
+}
+
+void loop() {
+  if (VCSerial.available() >= 2) {
+    byte highByte = VCSerial.read();
+    byte lowByte = VCSerial.read();
+    receivedValue = (highByte << 8) | lowByte;
+
+    Serial.print("Kode diterima: 0x");
+    Serial.println(receivedValue, HEX);
+
+    // --- Servo1: Horizontal ---
+    if (receivedValue == 0xA105) { // LEFT
+      Serial.println("Servo1 kiri 5 derajat");
+      servo1.write(70);
+      delay(90);
+      servo1.write(90);
+
+    } else if (receivedValue == 0xA103) { // LITTLE BIT LEFT
+      Serial.println("Servo1 kiri 3 derajat");
+      servo1.write(75);
+      delay(50);
+      servo1.write(90);
+
+    } else if (receivedValue == 0xA203) { // LITTLE BIT RIGHT
+      Serial.println("Servo1 kanan 3 derajat");
+      servo1.write(105);
+      delay(50);
+      servo1.write(90);
+
+    // --- Servo2: Vertikal ---
+    } else if (receivedValue == 0xA505) { // UP
+      Serial.println("Servo2 naik 5 derajat");
+      servo2.write(70);
+      delay(90);
+      servo2.write(90);
+
+    } else if (receivedValue == 0xA503) { // LITTLE BIT UP
+      Serial.println("Servo2 naik 3 derajat");
+      servo2.write(75);
+      delay(50);
+      servo2.write(90);
+
+    } else if (receivedValue == 0x606) { // DOWN
+      Serial.println("Servo2 turun 5 derajat");
+      servo2.write(110);
+      delay(90);
+      servo2.write(90);
+
+    } else if (receivedValue == 0xA603) { // LITTLE BIT DOWN
+      Serial.println("Servo2 turun 3 derajat");
+      servo2.write(105);
+      delay(50);
+      servo2.write(90);
+
+    // --- Relay Control ---
+    } else if (receivedValue == 0xAA11) {
+      Serial.println("Lampu ON selama 3 detik");
+      digitalWrite(relay, HIGH);
+      delay(3000);
+      digitalWrite(relay, LOW);
+
+    } else if (receivedValue == 0xAA00) {
+      Serial.println("Lampu OFF");
+      digitalWrite(relay, LOW);
+
+    } else {
+      Serial.println("Perintah tidak dikenali.");
+    }
+  }
+}
