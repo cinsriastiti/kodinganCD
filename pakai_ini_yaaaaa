@@ -1,0 +1,144 @@
+#include <Adafruit_PWMServoDriver.h>
+#include <SoftwareSerial.h>
+#include <Wire.h>
+
+#define SERVO1 0
+#define SERVO2 1
+#define SERVO_FREQ 50
+
+SoftwareSerial vcSerial(7, 8); // RX, TX ke VC-02
+
+unsigned int receivedValue = 0;
+const int relay = 2;
+
+// Servo dengan PCA9685
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+// Linear Aktuator
+const int ENA_PIN = 9;
+const int IN1_PIN = 6;
+const int IN2_PIN = 5;
+
+void setup() {
+  Serial.begin(115200);
+  vcSerial.begin(9600);
+
+  // Relay
+  pinMode(relay, OUTPUT);
+  digitalWrite(relay, LOW);
+
+  // PCA Servo
+  pwm.begin();
+  pwm.setPWMFreq(SERVO_FREQ);
+  delay(10);
+
+  // Linear Aktuator
+  pinMode(ENA_PIN, OUTPUT);
+  pinMode(IN1_PIN, OUTPUT);
+  pinMode(IN2_PIN, OUTPUT);
+  digitalWrite(ENA_PIN, HIGH);
+
+  Serial.println("Siap menerima perintah suara...");
+}
+
+void loop() {
+  if (vcSerial.available() >= 2) {
+    byte highByte = vcSerial.read();
+    byte lowByte = vcSerial.read();
+    receivedValue = (highByte << 8) | lowByte;
+
+    Serial.print("Kode diterima: 0x");
+    Serial.println(receivedValue, HEX);
+
+    // Horizontal: LEFT
+    if (receivedValue == 0xA105) {
+      pwm.writeMicroseconds(SERVO1, 900); 
+      delay(100); 
+      pwm.setPWM(SERVO1, 0, 0);
+    }
+
+    //slighttly left
+    else if (receivedValue == 0xA103) {
+      pwm.writeMicroseconds(SERVO1, 1200);  // coba 1200 µs
+      delay(45);
+      pwm.setPWM(SERVO1, 0, 0);
+    }
+
+    // Horizontal: slightly RIGHT
+    else if (receivedValue == 0xA203) {
+      pwm.writeMicroseconds(SERVO1, 1800);  // coba 1200 µs
+      delay(45);
+      pwm.setPWM(SERVO1, 0, 0);
+    }
+
+    // Forward
+    else if (receivedValue == 0xA305) {
+      pwm.writeMicroseconds(SERVO2, 900); 
+      delay(100); 
+      pwm.setPWM(SERVO2, 0, 0);
+    }
+
+    //slightly forward
+    else if (receivedValue == 0xA303) {
+      pwm.writeMicroseconds(SERVO2, 1200); 
+      delay(45); 
+      pwm.setPWM(SERVO2, 0, 0);
+    }
+
+    // Backward
+    else if (receivedValue == 0xA405) {
+      pwm.writeMicroseconds(SERVO2, 1800);  // coba 1200 µs
+      delay(45);
+      pwm.setPWM(SERVO2, 0, 0);
+    }
+
+    //slightly backward
+    else if (receivedValue == 0xA403) {
+      pwm.writeMicroseconds(SERVO2, 2100);  // coba 1200 µs
+      delay(45);
+      pwm.setPWM(SERVO2, 0, 0);
+    }
+
+    // Linear Aktuator: UP
+    else if (receivedValue == 0xA505) {
+      digitalWrite(IN1_PIN, HIGH);
+      digitalWrite(IN2_PIN, LOW);
+      delay(3000);
+      digitalWrite(IN1_PIN, LOW);
+      digitalWrite(IN2_PIN, LOW);
+    }
+
+    // Linear Aktuator: slightly DOWN
+    else if (receivedValue == 0xA603) {
+      digitalWrite(IN1_PIN, LOW);
+      digitalWrite(IN2_PIN, HIGH);
+      delay(3000);
+      digitalWrite(IN1_PIN, LOW);
+      digitalWrite(IN2_PIN, LOW);
+    }
+
+    // Lampu ON
+    else if (receivedValue == 0xAA11) {
+      digitalWrite(relay, LOW);
+      Serial.println("Lampu ON");
+    }
+
+    // Lampu OFF
+    else if (receivedValue == 0xAA00) {
+      digitalWrite(relay, HIGH);
+      Serial.println("Lampu OFF");
+    }
+
+    else {
+      Serial.println("Perintah tidak dikenali.");
+    }
+
+    delay(500); // jeda antar perintah
+  }
+}
+
+int angleToPulse(int angle) {
+  int pulseMin = 150;  // untuk DS3235SG
+  int pulseMax = 600;
+  return map(angle, 0, 180, pulseMin, pulseMax);
+}
